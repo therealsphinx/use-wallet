@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import create from 'zustand';
+import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import Unit from 'base/src/unit';
 import Emitter from 'base/src/chains/ethereum';

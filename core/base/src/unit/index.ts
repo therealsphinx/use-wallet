@@ -1,123 +1,239 @@
 import Decimal from 'decimal.js';
-Decimal.set({ precision: 80  });
+Decimal.set({ precision: 80 });
 
 const calcDecimals = (decimals: number = 18) => {
-    let _decimals: number = decimals;;
+    let _decimals: number = decimals;
     if (typeof decimals !== 'number' || decimals <= 0) {
         _decimals = 18;
     }
 
     return Decimal.pow(10, _decimals);
-}
+};
+
+type ValidValue = string | number | Decimal | Unit;
 
 class Unit {
-    private value: Decimal; // decimal min unit('drip' in conflux and 'wei' in eth).
+    public value: Decimal; // decimal min unit('drip' in conflux and 'wei' in eth).
 
-    constructor(value: Decimal) {
-        this.value = value;
+    constructor(value: ValidValue) {
+        if (Unit.isUnit(value)) {
+            this.value = value.value;
+        } else if (Decimal.isDecimal(value)) {
+            this.value = value;
+        } else {
+            this.value = new Decimal(value);
+        }
     }
+    static isUnit = (obj: any): obj is Unit => obj instanceof Unit;
 
-    static fromStandardUnit = (value: string | number, decimals: number = 18) => {
+    static fromStandardUnit = (value: string | number | Decimal, decimals: number = 18) => {
+        if (Decimal.isDecimal(value)) {
+            return new Unit(value.mul(calcDecimals(decimals)));
+        }
         return new Unit(new Decimal(value).mul(calcDecimals(decimals)));
     };
 
-    static fromMinUnit = (value: string | number) => {
+    static fromMinUnit = (value: string | number | Decimal) => {
+        if (Decimal.isDecimal(value)) {
+            return new Unit(value);
+        }
         return new Unit(new Decimal(value));
     };
-    
-    static equals = (a: Unit, b: Unit) => {
-        return a.value.eq(b.value);
+
+    static fromDecimal = (value: string | number | Decimal) => {
+        return Unit.fromMinUnit(value);
+    };
+
+    static equals = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return _a.value.eq(_b.value);
+    };
+
+    static min = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return _a.greaterThan(_b) ? _b : _a;
+    };
+
+    static max = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return _a.greaterThan(_b) ? _a : _b;
+    };
+
+    static clamp = (value: ValidValue, min: ValidValue, max: ValidValue) => {
+        const _value = new Unit(value);
+        const _min = new Unit(min);
+        const _max = new Unit(max);
+        return _value.greaterThan(_max) ? _max : _value.lessThan(_min) ? _min : _value;
     }
 
-    static min = (a: Unit, b: Unit) => {
-        return a.greaterThan(b) ? b : a;
-    }
+    equals = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return this.value.eq(_another.value);
+    };
 
-    static max = (a: Unit, b: Unit) => {
-        return a.greaterThan(b) ? a : b;
-    }
+    static lessThan = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return _a.value.lessThan(_b.value);
+    };
 
-    equals = (another: Unit) => {
-        return this.value.eq(another.value);
-    }
+    lessThan = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return this.value.lessThan(_another.value);
+    };
 
-    static lessThan = (a: Unit, b: Unit) => {
-        return a.value.lessThan(b.value);
-    }
+    static greaterThan = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return _a.value.greaterThan(_b.value);
+    };
 
-    lessThan = (another: Unit) => {
-        return this.value.lessThan(another.value);
-    }
+    greaterThan = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return this.value.greaterThan(_another.value);
+    };
 
-    static greaterThan = (a: Unit, b: Unit) => {
-        return a.value.greaterThan(b.value);
-    }
+    static lessThanOrEqualTo = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return _a.value.lessThanOrEqualTo(_b.value);
+    };
 
-    greaterThan = (another: Unit) => {
-        return this.value.greaterThan(another.value);
-    }
+    lessThanOrEqualTo = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return this.value.lessThanOrEqualTo(_another.value);
+    };
 
-    static lessThanOrEqualTo = (a: Unit, b: Unit) => {
-        return a.value.lessThanOrEqualTo(b.value);
-    }
+    static greaterThanOrEqualTo = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return _a.value.greaterThanOrEqualTo(_b.value);
+    };
 
-    lessThanOrEqualTo = (another: Unit) => {
-        return this.value.lessThanOrEqualTo(another.value);
-    }
+    greaterThanOrEqualTo = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return this.value.greaterThanOrEqualTo(_another.value);
+    };
 
-    static greaterThanOrEqualTo = (a: Unit, b: Unit) => {
-        return a.value.greaterThanOrEqualTo(b.value);
-    }
+    static add = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return new Unit(_a.value.add(_b.value));
+    };
 
-    greaterThanOrEqualTo = (another: Unit) => {
-        return this.value.greaterThanOrEqualTo(another.value);
-    }
+    add = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return new Unit(this.value.add(_another.value));
+    };
 
+    static sub = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return new Unit(_a.value.sub(_b.value));
+    };
 
-    static add = (a: Unit, b: Unit) => {
-        return new Unit(a.value.add(b.value));
-    }
+    sub = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return new Unit(this.value.sub(_another.value));
+    };
 
-    add = (another: Unit) => {
-        return new Unit(this.value.add(another.value));
-    }
+    static mul = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return new Unit(_a.value.mul(_b.value));
+    };
 
+    mul = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return new Unit(this.value.mul(_another.value));
+    };
 
-    static sub = (a: Unit, b: Unit) => {
-        return new Unit(a.value.sub(b.value));
-    }
+    static div = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return new Unit(_a.value.div(_b.value));
+    };
 
-    sub = (another: Unit) => {
-        return new Unit(this.value.sub(another.value));
-    }
+    div = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return new Unit(this.value.div(_another.value));
+    };
 
-    static mul = (a: Unit, b: Unit) => {
-        return new Unit(a.value.mul(b.value));
-    }
+    static pow = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return new Unit(_a.value.pow(_b.value));
+    };
 
-    mul = (another: Unit) => {
-        return new Unit(this.value.mul(another.value));
-    }
+    pow = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return new Unit(this.value.pow(_another.value));
+    };
 
-    static div = (a: Unit, b: Unit) => {
-        return new Unit(a.value.div(b.value));
-    }
+    static log = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return new Unit(_a.value.log(_b.value));
+    };
 
-    div = (another: Unit) => {
-        return new Unit(this.value.div(another.value));
-    }
+    log = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return new Unit(this.value.log(_another.value));
+    };
 
-    static pow = (a: Unit, b: Unit) => {
-        return new Unit(a.value.pow(b.value));
-    }
+    static sqrt = (target: ValidValue) => {
+        const _target = new Unit(target);
+        return new Unit(_target.value.sqrt());
+    };
 
-    pow = (another: Unit) => {
-        return new Unit(this.value.pow(another.value));
-    }
+    sqrt = () => {
+        return new Unit(this.value.sqrt());
+    };
 
-    equalsWith = (another: Unit) => {
-        return this.value.eq(another.value);
-    }
+    static mod = (a: ValidValue, b: ValidValue) => {
+        const _a = new Unit(a);
+        const _b = new Unit(b);
+        return new Unit(_a.value.mod(_b.value));
+    };
+
+    mod = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return new Unit(this.value.mod(_another.value));
+    };
+
+    equalsWith = (another: ValidValue) => {
+        const _another = new Unit(another);
+        return this.value.eq(_another.value);
+    };
+
+    isNaN = () => {
+        return this.value.isNaN();
+    };
+
+    static isNaN = (target: ValidValue) => {
+        if (typeof target !== 'object') {
+            return Number.isNaN(Number(target));
+        }
+        if (Decimal.isDecimal(target)) return target.isNaN();
+        if (Unit.isUnit(target)) return target.isNaN();
+        return false;
+    };
+
+    isFinite = () => {
+        return this.value.isFinite();
+    };
+
+    static isFinite = (target: ValidValue) => {
+        if (typeof target !== 'object') {
+            return Number.isFinite(Number(target));
+        }
+        if (Decimal.isDecimal(target)) return target.isFinite();
+        if (Unit.isUnit(target)) return target.isFinite();
+        return false;
+    };
 
     toDecimalStandardUnit = (toFixed?: number, decimals: number = 18) => {
         if (typeof toFixed === 'number' && toFixed > 0) {
@@ -157,7 +273,11 @@ class Unit {
 
     toString = () => {
         return this.toDecimalStandardUnit();
-    }
+    };
+
+    toDecimal = () => {
+        return this.value;
+    };
 
     [Symbol.toPrimitive](hint: 'string' | 'number' | 'default') {
         return hint == 'string' ? this.toDecimalStandardUnit() : this.value;
